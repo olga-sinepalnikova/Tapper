@@ -1,16 +1,16 @@
 package main
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strconv"
 )
 
 type User struct {
 	ID          uint   `json:"id"`
 	Login       string `json:"login"`
 	Password    string `json:"password"`
-	TokensCount uint   `json:"tokens_count"`
+	TokensCount uint64 `json:"tokens_count"`
 }
 
 type Message struct {
@@ -39,14 +39,14 @@ func getMessages(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, messages)
 }
 
-func postMessage(c *gin.Context) {
-	var msg Message
-	if err := c.ShouldBindJSON(&msg); err != nil {
-		return
-	}
-	messages = append(messages, msg)
-	fmt.Println(messages)
-	c.IndentedJSON(http.StatusCreated, msg)
+func postPayoutTokens(c *gin.Context) {
+	payout, _ := c.GetPostForm("payout")
+	payoutUnit, _ := strconv.ParseUint(payout, 10, 64)
+	users[0].TokensCount += payoutUnit
+	c.HTML(http.StatusOK, "index.html", gin.H{
+		"title":         "Tapper first page",
+		"TokensInPurse": users[0].TokensCount,
+	})
 }
 
 func main() {
@@ -54,11 +54,12 @@ func main() {
 	router.LoadHTMLGlob("web/*")
 	router.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", gin.H{
-			"title": "Tapper first page",
+			"title":         "Tapper first page",
+			"TokensInPurse": users[0].TokensCount,
 		})
 	})
 	router.GET("/users", getUser)
 	router.GET("/msg", getMessages)
-	router.POST("/msg", postMessage)
+	router.POST("/", postPayoutTokens)
 	router.Run("localhost:8081")
 }

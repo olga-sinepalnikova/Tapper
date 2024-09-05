@@ -9,8 +9,23 @@
 </head>
 <body>
 <p>Your token count is <p id="TokenCount">0</p> </p>
-<p>Your token count in purse is <p id="TokensInPurse">0</p> </p>
-<button>Click to earn</button>
-<button formmethod="post">Click to payout</button>
+<p>Your token count in purse is {{.TokensInPurse}} </p>
+<button id="click-me">Click to earn </button>
+<form action="/" method="post" name="form">
+    <button name="payout" id="pyt" value="0">Click to payout</button>
+</form>
+
+<script>
+    let count = 0;
+    const payoutBtn = document.getElementById("pyt");
+    payoutBtn.value = 0;
+    const button = document.getElementById("click-me");
+    const counter = document.getElementById("TokenCount");
+    button.addEventListener("click", function() {
+        count++;
+        counter.innerHTML = count.toString();
+        payoutBtn.value = count;
+    });
+</script>
 </body>
 </html>
