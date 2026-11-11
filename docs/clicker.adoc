@@ -1,0 +1,49 @@
+[plantuml, game-components, svg]
+----
+@startuml
+skinparam shadowing false
+
+actor User
+component "Go API" as API
+component "Worker\n(every 15 s)" as Worker
+database "Redis\n(pending_clicks, batch UUIDs with TTL)" as Redis
+database "PostgreSQL\n(coins, last_tick_at)" as PG
+
+User --> API : 1. POST batch (UUID, clicks)
+API --> Redis : 2. Check UUID, add clicks
+Worker --> Redis : 3. Read and reset pending clicks
+Worker --> PG : 4. Save coins and last_tick_at
+@enduml
+----
+
+[plantuml, game-sequence, svg]
+----
+@startuml
+skinparam shadowing false
+
+actor User
+participant "Go API" as API
+database Redis
+participant Worker
+database PostgreSQL as PG
+
+User -> API : POST batch (UUID, clicks)
+API -> Redis : SET batch:UUID NX EX 86400
+alt UUID is new
+  API -> API : Cap clicks (max speed × time since last batch)
+  API -> Redis : INCRBY pending_clicks
+  API --> User : 200 OK
+else UUID already seen
+  API --> User : 200 OK (duplicate, ignored)
+end
+
+loop every 15 s
+  Worker -> Redis : GETDEL pending_clicks
+  Worker -> Worker : coins = clicks × coins_per_click\n+ passive_rate × elapsed_seconds
+  Worker -> PG : UPDATE coins, last_tick_at (one transaction)
+  alt save failed
+    Worker -> Redis : INCRBY pending_clicks (put back)
+  end
+end
+@enduml
+----
